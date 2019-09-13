@@ -1,2 +1,2 @@
-include ':app', ':06092019mobiiliohjelmointi'
+include ':2Assigment', ':1Assigment', ':2assigment', ':2assigment2', ':2assigment3'
 rootProject.name='My Application Java'
