@@ -11,13 +11,22 @@ import android.widget.ImageView;
 public class MainActivity extends AppCompatActivity {
     private boolean button2enabled = true;
     private int image1hidden = 0;
-    private Button button1 = findViewById((R.id.button2));
+    private Button button1 = findViewById((R.id.button));
+    private  Button button2 = findViewById(R.id.button2);
     private ImageView image = findViewById(R.id.image1);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        button2.setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View v) {
+                Button3OnClick(v);
+                return true;
+            }
+        });
     }
     public void Button1OnClick(View view){
         button1.setEnabled(button2enabled);
