@@ -33,6 +33,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 listadapter.add(Calendar.getInstance().getTime());
+                listadapter.notifyDataSetChanged();
             }
 
         });
