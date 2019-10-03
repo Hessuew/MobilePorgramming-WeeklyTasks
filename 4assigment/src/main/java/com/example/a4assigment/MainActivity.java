@@ -12,7 +12,6 @@ import android.widget.EditText;
 public class MainActivity extends AppCompatActivity {
 
     private EditText editText;
-    private Button button;
     private boolean disabled = true;
     private String editTexttext = "";
 
