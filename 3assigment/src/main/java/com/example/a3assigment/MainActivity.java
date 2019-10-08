@@ -3,40 +3,40 @@ package com.example.a3assigment;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.os.Bundle;
+import android.os.Environment;
 import android.view.View;
-import android.widget.ArrayAdapter;
-import android.widget.Button;
 import android.widget.ListView;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 
 public class MainActivity extends AppCompatActivity {
-    ArrayList<String> list = new ArrayList<>();
-    ListView simpleList;
-    adapter listadapter;
-    Button nappi;
+
+    private ArrayList<Date> lista = new ArrayList<>();
+    private omaAdapteri adapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
         setContentView(R.layout.activity_main);
 
-        simpleList = findViewById(R.id.listaView);
-        nappi = findViewById(R.id.add_btn);
+        // Add custom adapter to the ListView.
+        adapter = new omaAdapteri(this, R.layout.listatemplate, R.id.textView, lista);
+        ListView listview = findViewById(R.id.listView);
+        listview.setAdapter(adapter);
 
-        listadapter = new adapter(this, android.R.layout.simple_list_item_1);
-        simpleList.setAdapter(listadapter);
-
-        nappi.setOnClickListener(new View.OnClickListener() {
+        // Button above the ListView.
+        findViewById(R.id.button).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                listadapter.add(Calendar.getInstance().getTime());
-                listadapter.notifyDataSetChanged();
+                Date aika = Calendar.getInstance().getTime();
+                lista.add(aika);
+                adapter.notifyDataSetChanged();
             }
-
         });
-
     }
+
 }
