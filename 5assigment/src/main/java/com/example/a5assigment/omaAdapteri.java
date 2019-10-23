@@ -5,7 +5,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
-import android.widget.Button;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -40,7 +39,7 @@ public class omaAdapteri extends ArrayAdapter<Date> {
 
         View v;
         if (convertView == null) {
-            v = LayoutInflater.from(context).inflate(R.layout.item, parent, false);
+            v = LayoutInflater.from(context).inflate(R.layout.listaitem, parent, false);
             ((TextView) v.findViewById(R.id.nimi)).setText(lista.get(position).toString());
         } else {
             v = convertView;
