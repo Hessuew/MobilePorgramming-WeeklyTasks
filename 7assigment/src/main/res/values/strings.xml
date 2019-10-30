@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">7Assigment</string>
+    <item type="id" name="editText1"/>
+</resources>

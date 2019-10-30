@@ -1,2 +1,2 @@
-include ':2Assigment', ':1Assigment', ':2assigment', ':2assigment2', ':2assigment3', ':3assigment', ':4assigment', ':4_1assigment', ':5assigment', ':fragmentExample', ':6assigment'
+include ':2Assigment', ':1Assigment', ':2assigment', ':2assigment2', ':2assigment3', ':3assigment', ':4assigment', ':4_1assigment', ':5assigment', ':fragmentExample', ':6assigment', ':7assigment'
 rootProject.name='My Application Java'
