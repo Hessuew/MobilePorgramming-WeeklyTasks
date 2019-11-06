@@ -1,6 +1,9 @@
-package com.example.a7assigment;
+package com.example.a8assigment;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.room.Room;
+import androidx.room.RoomDatabase;
+import androidx.room.TypeConverter;
 
 import android.content.Context;
 import android.graphics.Color;
@@ -21,26 +24,33 @@ import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
 import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 
-public class MainActivity extends AppCompatActivity {
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 
+public class MainActivity extends AppCompatActivity {
     private ConnectivityManager cm;
     private Context context;
     private RequestQueue queue = null;
     private Button searchButton;
     private EditText searchText;
-    private ArrayList<Picture> lista = new ArrayList<>();
     private ownAdapter adapter;
+    private MinunTaulu minunTaulu;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        adapter = new ownAdapter(this, R.layout.listtemplate, lista);
+        adapter = new ownAdapter(this, R.layout.listtemplate, minunTaulu);
         ListView listview = findViewById(R.id.listView);
         listview.setAdapter(adapter);
 
@@ -112,10 +122,29 @@ public class MainActivity extends AppCompatActivity {
     public void getDataFromResponse (JSONObject response) throws JSONException {
 
         Gson gson = new Gson();
+        Type listantyyppi = new TypeToken<ArrayList<MinunTaulu>>(){}.getType();
+        ArrayList<MinunTaulu> lista;
 
-        Picture pict = gson.fromJson(response.toString(), Picture.class);
+        lista = gson.fromJson(response.toString(), listantyyppi);
 
-        lista.add(pict);
+        RoomDatabase.Builder<Tietokanta> rakentaja = Room.databaseBuilder(getApplicationContext(), Tietokanta.class, (String) Tietokanta.NIMI);
+        File file = new File("path");
+
+        Tietokanta kanta = rakentaja.build();
+
+        MinunTauluDao dataaccessobject = kanta.MinunTauluDao();
+        MinunTaulu x = new MinunTaulu();
+        x.url = (String) response.get("file");
+        x.license = (String) response.get("license");
+        x.owner = (String) response.get("owner");
+        x.width = (int) response.get("width");
+        x.height = (int) response.get("height");
+        x.filter = (String) response.get("filter");
+        x.tags = (String) response.get("tags");
+        x.tagMode = (String) response.get("tagMode");
+        dataaccessobject.InsertMyEntity(x);
+
+        dataaccessobject.getAllInDescendingOrder();
         adapter.notifyDataSetChanged();
 
         Toast.makeText(context, "Data loaded", Toast.LENGTH_SHORT).show();
@@ -129,3 +158,5 @@ public class MainActivity extends AppCompatActivity {
         return (allNetworks != null);
     }
 }
+
+

@@ -13,7 +13,7 @@ import androidx.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Date;
 
-public class omaAdapteri extends ArrayAdapter<Date> {
+public class OmaAdapteri extends ArrayAdapter<Date> {
 
     private int line_layout;
     private int textviewid;
@@ -21,7 +21,7 @@ public class omaAdapteri extends ArrayAdapter<Date> {
     private LayoutInflater inflater;
     private Context context;
 
-    public omaAdapteri(@NonNull Context context,
+    public OmaAdapteri(@NonNull Context context,
                        int resource,
                        int textViewResourceId,
                        @NonNull ArrayList<Date> objects) {

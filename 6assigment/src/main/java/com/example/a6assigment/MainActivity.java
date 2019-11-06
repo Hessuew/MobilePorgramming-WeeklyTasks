@@ -2,14 +2,14 @@ package com.example.a6assigment;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
-import android.net.Uri;
-import android.os.Build;
+import android.net.ConnectivityManager;
+import android.net.Network;
 import android.os.Bundle;
-import android.widget.Adapter;
-import android.widget.ListView;
 import android.widget.Toast;
 
+import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
@@ -20,65 +20,113 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 
 import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.lang.reflect.Type;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
 
-public class MainActivity extends AppCompatActivity implements Fragment1.IsisaltoFragment, Fragment2.ShowData{
+public class MainActivity extends AppCompatActivity implements ButtonsFragment.IbuttonsListener {
 
-    Tietokanta tietokanta = new Tietokanta(MainActivity.this);
-    RequestQueue jono;
-    JsonArrayRequest request;
-    Object obj = getSupportFragmentManager().findFragmentById(R.id.fragment2);
+    private ConnectivityManager cm;
+    private Context context;
+    private Boolean isNet;
+    private playerAdapter adapter;
+    public ArrayList<NimiJaPvm> players = new ArrayList<>();
+    private RequestQueue queue = null;
+    private DBHelper sqldb;
+
+
+    @Override
+    public SQLiteDatabase openOrCreateDatabase(String name, int mode, SQLiteDatabase.CursorFactory factory) {
+        return super.openOrCreateDatabase(name, mode, factory);
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        jono = Volley.newRequestQueue(this);
-        OmaAdapteri = new OmaAdapteri(getApplicationContext(), R.layout.listaitem, lista);
-        listView.setAdapter(OmaAdapteri);
+
+        if (context == null) {
+            context = getApplicationContext();
+        }
+
+        isNet = isInternet(context);
+        if(isNet == false) {
+            Toast.makeText(context, "No network available.", Toast.LENGTH_SHORT).show();
+        }
+
+        sqldb = new DBHelper(context);
+        sqldb.deleteTable();
     }
 
-    OmaAdapteri OmaAdapteri;
-    ListView listView;
-    public ArrayList<dada> lista;
+    private void doJsonQuery() {
+        if (queue == null) {
+            queue = Volley.newRequestQueue(this);
+        }
+        String url = "https://webd.savonia.fi/home/ktkoiju/j2me/test_json.php?dates&delay=1";
 
-    @Override
-    public void Button1Pressed(Fragment1.IcallBack icallBack) {
-        request = new JsonArrayRequest(
-                "https://webd.savonia.fi/home/ktkoiju/j2me/test_json.php?dates&delay=1",
+        JsonArrayRequest jsonArrayRequest = new JsonArrayRequest(Request.Method.GET, url, null,
                 new Response.Listener<JSONArray>() {
                     @Override
                     public void onResponse(JSONArray response) {
-                        GsonBuilder gsonBuilder = new GsonBuilder();
-                        Gson gson = gsonBuilder.create();
-                        Type listantyyppi = new TypeToken<ArrayList<dada>>(){}.getType();
-                        lista = gson.fromJson(response.toString(), listantyyppi);
-                        String[] item = lista.toArray(new String[lista.size()]);
-                        tietokanta.insertUserDetails(item);
-                        Toast.makeText(MainActivity.this,"Data Inserted Successfully", Toast.LENGTH_LONG).show();
+                        try {
+                            getDataFromResponse(response);
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
                     }
-                }, new Response.ErrorListener() {
-            @Override
-            public void onErrorResponse(VolleyError error) {
-                Toast.makeText(getApplicationContext(), error.getMessage().toString(), Toast.LENGTH_LONG).show();
-            }
-        });
-        jono.add(request);
+                },
+                new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        Toast.makeText(MainActivity.this, "Error fetching data: " + error.getMessage(), Toast.LENGTH_SHORT).show();
+                    }
+                });
+        queue.add(jsonArrayRequest);
     }
 
-    @Override
-    public void Button2Pressed(Fragment1.IcallBack icallBack) {
-        lista = tietokanta.GetUsers();
-    }
+    public void getDataFromResponse (JSONArray response) throws JSONException {
 
-    @Override
-    public void ShowDataonList() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
-            OmaAdapteri.addAll(lista);
+        // Deserialisoitu tapa hakea JSON-taulukko
+        GsonBuilder gsonBuilder = new GsonBuilder();
+        Gson gson = gsonBuilder.create();
+        Type listantyyppi = new TypeToken<ArrayList<NimiJaPvm>>(){}.getType();
+        ArrayList<NimiJaPvm> lista;
+
+        lista = gson.fromJson(response.toString(), listantyyppi);
+
+        for (int i=0; i < response.length(); i++ ) {
+            JSONObject o = response.getJSONObject(i);
+            String pvm = o.getString("pvm");
+            String nimi = o.getString("nimi");
+            sqldb.addData(nimi, pvm);
         }
+        Toast.makeText(context, "Data loaded", Toast.LENGTH_SHORT).show();
+    }
+
+    private boolean isInternet(Context context) {
+
+        final Network[] allNetworks;
+        cm = (ConnectivityManager) context.getSystemService(CONNECTIVITY_SERVICE);
+        allNetworks = cm.getAllNetworks();
+        return (allNetworks != null);
+    }
+
+    // for interface
+    @Override
+    public void onGetDataClicked() {
+        sqldb.deleteTable();
+        doJsonQuery();
+    }
+
+    // for interface
+    @Override
+    public void onShowDataClicked() {
+        players = sqldb.getAllData();
+
+        ListViewFragment listViewFragment = (ListViewFragment)
+                getSupportFragmentManager().findFragmentById(R.id.fragmentListView);
+        listViewFragment.dataToFragment(players);
     }
 }

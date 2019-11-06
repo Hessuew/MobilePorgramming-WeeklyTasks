@@ -4,11 +4,11 @@ import com.google.gson.annotations.SerializedName;
 
 import java.sql.Date;
 
-public class Data {
+public class dada {
     private Date pvm;
     private String nimi;
 
-    public Data(){
+    public dada(){
     }
     public Date getPvm() {
         return pvm;
