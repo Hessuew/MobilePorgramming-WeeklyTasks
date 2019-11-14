@@ -1,10 +1,10 @@
 package com.example.a7assigment;
 
+
 import android.app.Activity;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Picture;
 import android.os.AsyncTask;
 import android.util.Log;
 import android.view.LayoutInflater;

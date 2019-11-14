@@ -11,40 +11,29 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import java.util.ArrayList;
-import java.util.Date;
+import java.util.List;
 
-public class OmaAdapteri extends ArrayAdapter<Date> {
-
-    private int line_layout;
-    private int textviewid;
-    private ArrayList<Date> lista;
-    private LayoutInflater inflater;
+class OmaAdapteri extends ArrayAdapter {
+    private ArrayList<dada> lista;
     private Context context;
 
-    public OmaAdapteri(@NonNull Context context,
-                       int resource,
-                       int textViewResourceId,
-                       @NonNull ArrayList<Date> objects) {
-        super(context, resource, textViewResourceId, objects);
+    public OmaAdapteri(@NonNull Context context, int resource, @NonNull List objects) {
+        super(context, resource, objects);
+        lista = (ArrayList<dada>) objects;
         this.context = context;
-        line_layout = resource;
-        textviewid = textViewResourceId;
-        lista = objects;
-        inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
     }
 
     @NonNull
     @Override
-    public View getView(final int position, @Nullable View convertView, @NonNull ViewGroup parent) {
-
-        View v;
+    public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
         if (convertView == null) {
-            v = LayoutInflater.from(context).inflate(R.layout.listaitem, parent, false);
-            ((TextView) v.findViewById(R.id.nimi)).setText(lista.get(position).toString());
-        } else {
-            v = convertView;
+            View v = LayoutInflater.from(context).inflate(R.layout.listaitem, parent, false);
+            TextView t1 = v.findViewById(R.id.datetxt);
+            TextView t2 = v.findViewById(R.id.nimitxt);
+            t1.setText(lista.get(position).nimi);
+            t2.setText(lista.get(position).pvm);
+            convertView = v;
         }
-
-        return v;
+        return convertView;
     }
 }

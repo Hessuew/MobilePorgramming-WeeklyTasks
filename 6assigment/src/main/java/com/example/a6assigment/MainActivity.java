@@ -52,7 +52,7 @@ public class MainActivity extends AppCompatActivity implements ButtonsFragment.I
         }
 
         isNet = isInternet(context);
-        if(isNet == false) {
+        if(!isNet) {
             Toast.makeText(context, "No network available.", Toast.LENGTH_SHORT).show();
         }
 
