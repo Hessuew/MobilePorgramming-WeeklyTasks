@@ -1,162 +1,228 @@
 package com.example.a8assigment;
 
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.room.Room;
-import androidx.room.RoomDatabase;
-import androidx.room.TypeConverter;
-
+import android.annotation.SuppressLint;
 import android.content.Context;
-import android.graphics.Color;
+import android.graphics.Bitmap;
 import android.net.ConnectivityManager;
-import android.net.Network;
+import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.view.View;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.TextView;
 import android.widget.Toast;
+
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.lifecycle.ViewModelProvider;
 
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
+import com.android.volley.toolbox.ImageRequest;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
+import com.example.a8assigment.room.EntityListItem;
+import com.example.a8assigment.room.ModelListItem;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.lang.reflect.Type;
+import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 
-import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
+/*
+ * API data example
+ * JSON
+ * {
+ *  "file":"https:\/\/loremflickr.com\/cache\/resized\/65535_48691638487_3584a7fca6_320_240_g.jpg",
+ *  "license":"cc-nc-sa",
+ *  "owner":"Carbon Arc",
+ *  "width":320,"height":240,
+ *  "filter":"g",
+ *  "tags":"cat",
+ *  "tagMode":"all"
+ * }
+ * */
 
 public class MainActivity extends AppCompatActivity {
-    private ConnectivityManager cm;
-    private Context context;
-    private RequestQueue queue = null;
-    private Button searchButton;
-    private EditText searchText;
-    private ownAdapter adapter;
-    private MinunTaulu minunTaulu;
+    final String url = "https://loremflickr.com/json/g/320/240/";
+    // Layouts
+    LinearLayout mainLayout;
+    LinearLayout toolbar;
+    // Views
+    Button buttonFind;
+    TextView editTextSearch;
+    ListView listView;
+    // List
+    ArrayList<EntityListItem> list;
+    CustomAdapter customAdapter;
+    Toast loading;
+    // Database
+    private ModelListItem modelListItem;
+    // Request HTTP
+    private RequestQueue requestQueue;
 
+    // Internet connection status
+    private ConnectivityManager connMan;
+
+    @SuppressLint("ShowToast")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        adapter = new ownAdapter(this, R.layout.listtemplate, minunTaulu);
-        ListView listview = findViewById(R.id.listView);
-        listview.setAdapter(adapter);
+        loading = Toast.makeText(getApplicationContext(), "Loading..", Toast.LENGTH_LONG);
 
-        searchButton = new Button(this);
-        searchText = new EditText(this);
+        // Database
+        modelListItem = new ViewModelProvider(this).get(ModelListItem.class);
 
-        searchButton.setText("Get Picture");
-        searchText.setHint("Search");
+        // Layouts
+        mainLayout = findViewById(R.id.mainLayout);
+        toolbar = findViewById(R.id.toolbar);
 
-        searchButton.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View view) {
-                if(searchText.getText().toString().trim().length() == 0) {
-                    moveTaskToBack(true);
-                    android.os.Process.killProcess(android.os.Process.myPid());
-                    System.exit(1);
-                }else {
+        // Views
+        listView = findViewById(R.id.listView);
+        editTextSearch = new EditText(this);
+        editTextSearch.setLayoutParams(new LinearLayout.LayoutParams(0,
+                LinearLayout.LayoutParams.MATCH_PARENT, 80));
+        buttonFind = new Button(this);
+        buttonFind.setText(getString(R.string.buttonFind));
+        buttonFind.setLayoutParams(new LinearLayout.LayoutParams(0,
+                LinearLayout.LayoutParams.MATCH_PARENT, 20));
 
-                    doJsonQuery(searchText.getText().toString());
-                }
+        // Add button and editText to toolbar
+        toolbar.addView(editTextSearch);
+        toolbar.addView(buttonFind);
+
+        // Button functionality
+        buttonFind.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                addRequestToQueue(jsonRequestBuilder(editTextSearch.getText(), url));
             }
         });
 
-        LinearLayout toolb = findViewById(R.id.toolbar);
-        toolb.setBackgroundColor(Color.GRAY);
+        // Setup ListView
+        list = new ArrayList<>();
+        customAdapter = new CustomAdapter(this, list);
+        listView.setAdapter(customAdapter);
 
-        LinearLayout.LayoutParams textParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT, 2);
-        LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT, 3);
-        searchText.setBackgroundColor(Color.WHITE);
-        toolb.addView(searchText, textParams);
-        toolb.addView(searchButton, buttonParams);
+        // Get connection manager for internet connection status check.
+        connMan = (ConnectivityManager) this.getSystemService(Context.CONNECTIVITY_SERVICE);
 
-        if (context == null) {
-            context = getApplicationContext();
-        }
+        requestQueue = Volley.newRequestQueue(this);
 
-        if(!testInternet(context)) {
-            Toast.makeText(context, "No network available.", Toast.LENGTH_SHORT).show();
-        }
+        // Get data from database to listView
+        modelListItem.showData(customAdapter);
     }
 
-    private void doJsonQuery(String tag) {
-        if (queue == null) {
-            queue = Volley.newRequestQueue(this);
+    private JsonObjectRequest jsonRequestBuilder(CharSequence searchWord, String baseUrl) {
+        // Exits the program IF search is empty
+        if (searchWord.length() < 1) {
+            this.finish();
         }
+        String requestUrl = baseUrl + searchWord + "/all";
+        clearSearch();
+        loading.show();
 
-        String url = "https://loremflickr.com/json/g/320/240/"+tag+"/all";
+        return new JsonObjectRequest
+                (Request.Method.GET, requestUrl, null, new Response.Listener<JSONObject>() {
+                    String imgUrl;
 
-        JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.GET, url, null,
-                new Response.Listener<JSONObject>() {
                     @Override
                     public void onResponse(JSONObject response) {
                         try {
-                            getDataFromResponse(response);
-                        } catch (JSONException e) {
-                            searchText.setText(e.toString());
-                            e.printStackTrace();
+                            imgUrl = response.getString("file");
+                            addRequestToQueue(imageRequestBuilder(imgUrl, response));
+
+                        } catch (JSONException err) {
+                            err.printStackTrace();
                         }
                     }
-                },
-                new Response.ErrorListener() {
+                }, new Response.ErrorListener() {
+
                     @Override
                     public void onErrorResponse(VolleyError error) {
-                        Toast.makeText(MainActivity.this, "Error fetching data: " + error.getMessage(), Toast.LENGTH_SHORT).show();
+                        Toast.makeText(getApplicationContext(), "Query failed...", Toast.LENGTH_LONG).show();
                     }
                 });
-        queue.add(jsonObjectRequest);
     }
 
-    public void getDataFromResponse (JSONObject response) throws JSONException {
+    private ImageRequest imageRequestBuilder(final String url, final JSONObject response) {
 
-        Gson gson = new Gson();
-        Type listantyyppi = new TypeToken<ArrayList<MinunTaulu>>(){}.getType();
-        ArrayList<MinunTaulu> lista;
+        return new ImageRequest
+                (url, new Response.Listener<Bitmap>() {
+                    @Override
+                    public void onResponse(Bitmap bitmap) {
+                        if (bitmap != null && response != null) {
+                            try {
+                                // Create new item to be added to the database
+                                EntityListItem responseItem = new EntityListItem();
+                                responseItem.file = response.getString("file");
+                                responseItem.height = response.getInt("height");
+                                responseItem.width = response.getInt("width");
+                                responseItem.owner = response.getString("owner");
+                                responseItem.license = response.getString("license");
+                                responseItem.tagMode = response.getString("tagMode");
+                                responseItem.tags = response.getString("tags");
 
-        lista = gson.fromJson(response.toString(), listantyyppi);
+                                // Convert bitmap to byte[] because sqlite stores the image as a Blob
+                                ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                                bitmap.compress(Bitmap.CompressFormat.JPEG, 90, bos);
+                                responseItem.image = bos.toByteArray();
 
-        RoomDatabase.Builder<Tietokanta> rakentaja = Room.databaseBuilder(getApplicationContext(), Tietokanta.class, (String) Tietokanta.NIMI);
-        File file = new File("path");
+                                // Insert item to database
+                                modelListItem.insert(responseItem);
 
-        Tietokanta kanta = rakentaja.build();
+                                // Add the latest item to the view
+                                modelListItem.showLastAddition(customAdapter);
 
-        MinunTauluDao dataaccessobject = kanta.MinunTauluDao();
-        MinunTaulu x = new MinunTaulu();
-        x.url = (String) response.get("file");
-        x.license = (String) response.get("license");
-        x.owner = (String) response.get("owner");
-        x.width = (int) response.get("width");
-        x.height = (int) response.get("height");
-        x.filter = (String) response.get("filter");
-        x.tags = (String) response.get("tags");
-        x.tagMode = (String) response.get("tagMode");
-        dataaccessobject.InsertMyEntity(x);
-
-        dataaccessobject.getAllInDescendingOrder();
-        adapter.notifyDataSetChanged();
-
-        Toast.makeText(context, "Data loaded", Toast.LENGTH_SHORT).show();
+                            } catch (JSONException e) {
+                                e.printStackTrace();
+                            }
+                            loading.cancel();
+                        }
+                    }
+                }, 320, 240, null, Bitmap.Config.RGB_565, new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        Toast.makeText(getApplicationContext(), "Query failed...", Toast.LENGTH_LONG).show();
+                    }
+                });
     }
 
-    private boolean testInternet(Context context) {
-
-        final Network[] allNetworks;
-        cm = (ConnectivityManager) context.getSystemService(CONNECTIVITY_SERVICE);
-        allNetworks = cm.getAllNetworks();
-        return (allNetworks != null);
+    private void addRequestToQueue(Request request) {
+        // IF there is no internet connection. Prompt user and don't add query to queue.
+        if (!this.checkInternetConnection()) {
+            Toast.makeText(getApplicationContext(), "Internet connection not available!", Toast.LENGTH_LONG).show();
+            return;
+        }
+        requestQueue.add(request);
     }
+
+    private void clearSearch() {
+        editTextSearch.setText("");
+        editTextSearch.clearFocus();
+        hideKeyboard();
+    }
+
+    private void hideKeyboard() {
+        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+        try {
+            imm.hideSoftInputFromWindow(mainLayout.getWindowToken(), 0);
+        } catch (NullPointerException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private boolean checkInternetConnection() {
+        // Return true IF there is a active network with internet connection.
+        NetworkInfo network = connMan.getActiveNetworkInfo();
+        return network != null && network.isConnectedOrConnecting();
+    }
+
 }
-
-
